@@ -4,6 +4,9 @@
 - Nicholas Lin
 - Alexandra Ramey
 
+## GitHub Handle
+- nicklin877
+
 ## Project Summary
 This project is a Python-based legal precedent retrieval system for landmark U.S. Supreme Court cases. It reads a spreadsheet of curated cases and returns the most relevant matches for a case name, legal topic, factual issue, or plain-language query. The project models retrieval as a search problem over structured case records and ranks candidate results with a heuristic scoring function.
 
