@@ -149,6 +149,36 @@ class LegalCaseFinder:
         scored_results.sort(key=lambda item: (-item.score, item.case))
         return scored_results[:top_k]
 
+    def search_with_total(self, query: str, top_k: int = 5) -> Tuple[List[SearchResult], int]:
+        query = (query or "").strip()
+        if not query:
+            return [], 0
+
+        query_norm = normalize_text(query)
+        query_tokens = tokenize(query)
+        query_token_set = set(query_tokens)
+
+        scored_results: List[SearchResult] = []
+
+        for _, row in self.frame.iterrows():
+            score, explanation = self._score_row(row, query_norm, query_tokens, query_token_set)
+            if score > 0:
+                scored_results.append(
+                    SearchResult(
+                        score=round(score, 2),
+                        case=row["Case"],
+                        year=row["Year"],
+                        topic=row["Topic"],
+                        ruling=row["Ruling"],
+                        summary=row["Summary"],
+                        explanation=explanation,
+                    )
+                )
+
+        scored_results.sort(key=lambda item: (-item.score, item.case))
+        total_matches = len(scored_results)
+        return scored_results[:top_k], total_matches
+
     def _score_row(
         self,
         row: pd.Series,
@@ -315,10 +345,13 @@ class LegalCaseFinder:
         }
 
 
-def print_results(results: Sequence[SearchResult]) -> None:
+def print_results(results: Sequence[SearchResult], total_matches: int) -> None:
     if not results:
         print("No matching cases found.")
         return
+
+    print(f"Case results: {len(results)}/{total_matches}")
+    print()
 
     for index, result in enumerate(results, start=1):
         print(f"{index}. {result.case} ({result.year})")
@@ -329,21 +362,44 @@ def print_results(results: Sequence[SearchResult]) -> None:
         print(f"   Why it matched: {result.explanation}")
         print()
 
-
 def interactive_loop(finder: LegalCaseFinder, top_k: int) -> None:
     print("Legal Case Precedent Finder")
-    print('Enter a query such as "free speech in schools".')
-    print("Type quit to exit.\n")
+    print('Enter a search query such as "free speech" or "free, speech".')
+    print('Type "top [number]" such as "top 25" to change the number of results.')
+    print('Type "quit" or "exit" to stop.\n')
+
+    current_top_k = top_k
 
     while True:
-        query = input("Search query: ").strip()
-        if query.lower() in {"quit", "exit"}:
+        query = input(f"Search query [top {current_top_k}]: ").strip()
+
+        if not query:
+            continue
+
+        lowered_query = query.lower()
+
+        if lowered_query in {"quit", "exit"}:
             print("Goodbye.")
             break
 
-        results = finder.search(query, top_k=top_k)
-        print_results(results)
+        if lowered_query.startswith("top "):
+            parts = query.split()
 
+            if len(parts) == 2 and parts[1].isdigit():
+                new_top_k = int(parts[1])
+
+                if new_top_k > 0:
+                    current_top_k = new_top_k
+                    print(f"Number of results changed to {current_top_k}.\n")
+                else:
+                    print("Please enter a number greater than 0.\n")
+            else:
+                print('Use the format: top 10\n')
+
+            continue
+
+        results, total_matches = finder.search_with_total(query, top_k=current_top_k)
+        print_results(results, total_matches)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Search landmark Supreme Court cases.")
@@ -380,8 +436,8 @@ def main() -> None:
         return
 
     if args.query:
-        results = finder.search(args.query, top_k=args.top_k)
-        print_results(results)
+        results, total_matches = finder.search_with_total(args.query, top_k=args.top_k)
+        print_results(results, total_matches)
         return
 
     interactive_loop(finder, top_k=args.top_k)

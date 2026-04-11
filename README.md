@@ -42,6 +42,11 @@ pip install -r requirements.txt
 python legal_case_finder.py caselist.xlsx
 ```
 
+### Using interactive mode
+- keyword or keyword, keyword, etc.
+- phrase
+- top [number of results]
+
 ### One query from the command line
 ```bash
 python legal_case_finder.py caselist.xlsx --query "free speech in schools"
