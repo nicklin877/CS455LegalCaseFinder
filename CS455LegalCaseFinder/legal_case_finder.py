@@ -379,7 +379,7 @@ def interactive_loop(finder: LegalCaseFinder, top_k: int) -> None:
         lowered_query = query.lower()
 
         if lowered_query in {"quit", "exit"}:
-            print("Goodbye.")
+            print("Application Quit.")
             break
 
         if lowered_query.startswith("top "):
